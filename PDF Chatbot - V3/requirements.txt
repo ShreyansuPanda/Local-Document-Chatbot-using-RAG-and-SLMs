@@ -1,0 +1,10 @@
+langchain
+langchain-community
+pymupdf
+sentence-transformers
+faiss-cpu
+streamlit
+python-dotenv 
+langchain-ollama
+torch
+tqdm
