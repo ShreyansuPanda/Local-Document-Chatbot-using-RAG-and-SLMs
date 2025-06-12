@@ -69,33 +69,6 @@ Answer:"""
 
         Question: {question}
         Answer:"""
-    },
-    "codellama": {
-        "model_name": "codellama",
-        "temperature": 0.7,
-        "context_window": 4096,
-        "prompt_template": """You are a helpful AI assistant specialized in code and technical content. 
-        Use the following pieces of context to answer the question at the end.
-        If you don't know the answer, just say that you don't know, don't try to make up an answer.
-        Provide a technical and precise response.
-
-        Context: {context}
-
-        Question: {question}
-        Answer:"""
-    },
-    "neural-chat": {
-        "model_name": "neural-chat",
-        "temperature": 0.7,
-        "context_window": 4096,
-        "prompt_template": """You are a helpful AI assistant. Use the following pieces of context to answer the question at the end.
-        If you don't know the answer, just say that you don't know, don't try to make up an answer.
-        Provide a natural and conversational response.
-
-        Context: {context}
-
-        Question: {question}
-        Answer:"""
     }
 }
 
