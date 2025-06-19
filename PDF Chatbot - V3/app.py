@@ -1,7 +1,7 @@
 import streamlit as st
 import tempfile
 import os
-from pdf_qa import PDFQASystem, MODEL_CONFIGS
+from pdf_qa import DocumentQASystem, MODEL_CONFIGS
 from datetime import datetime
 import time
 import logging
@@ -74,13 +74,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("📚 PDF Q&A Chatbot")
-st.write("Upload one or more PDFs and ask questions about their content!")
+st.title("📚 Document Q&A Chatbot")
+st.write("Upload one or more documents (PDF, DOCX) and ask questions about their content!")
 
 # Initialize session state
 if 'qa_system' not in st.session_state:
     try:
-        st.session_state.qa_system = PDFQASystem()
+        st.session_state.qa_system = DocumentQASystem()
         logger.info("Initialized QA system")
     except Exception as e:
         st.error(f"Error initializing QA system: {str(e)}")
@@ -101,7 +101,7 @@ with st.sidebar:
     model = st.selectbox(
         "Select Model",
         list(MODEL_CONFIGS.keys()),
-        index=0,
+        index=list(MODEL_CONFIGS.keys()).index("mistral"),
         help="Choose the language model to use for answering questions"
     )
     
@@ -133,7 +133,7 @@ with st.sidebar:
         "Chunk Size",
         min_value=100,
         max_value=1000,
-        value=700,
+        value=500,
         step=50,
         help="Size of text chunks for processing"
     )
@@ -141,7 +141,7 @@ with st.sidebar:
         "Chunk Overlap",
         min_value=0,
         max_value=200,
-        value=150,
+        value=200,
         step=10,
         help="Overlap between chunks"
     )
@@ -151,7 +151,7 @@ with st.sidebar:
         st.session_state.qa_system.chunk_size != chunk_size or
         st.session_state.qa_system.chunk_overlap != chunk_overlap):
         try:
-            st.session_state.qa_system = PDFQASystem(
+            st.session_state.qa_system = DocumentQASystem(
                 model_name=model,
                 chunk_size=chunk_size,
                 chunk_overlap=chunk_overlap
@@ -163,12 +163,12 @@ with st.sidebar:
             logger.error(f"Error switching model: {str(e)}")
 
 # File uploader with multiple file support
-st.markdown("### 📄 Upload Your PDFs")
+st.markdown("### 📄 Upload Your Documents")
 uploaded_files = st.file_uploader(
-    "Drag and drop your PDF files here or click to browse",
-    type="pdf",
+    "Drag and drop your files here or click to browse",
+    type=["pdf", "docx"],
     accept_multiple_files=True,
-    help="Supported format: PDF files only"
+    help="Supported formats: PDF, DOCX files"
 )
 
 if uploaded_files:
@@ -177,7 +177,10 @@ if uploaded_files:
     
     # Process each uploaded file
     for idx, uploaded_file in enumerate(uploaded_files):
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+        # Get the correct file extension
+        file_ext = os.path.splitext(uploaded_file.name)[1].lower()
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp_file:
             tmp_file.write(uploaded_file.getvalue())
             tmp_file_path = tmp_file.name
 
@@ -190,8 +193,8 @@ if uploaded_files:
                 progress_bar.progress(progress)
                 status_text.text(status)
             
-            # Process the PDF
-            success = st.session_state.qa_system.process_pdf(
+            # Process the file
+            success = st.session_state.qa_system.process_file(
                 tmp_file_path,
                 progress_callback=update_progress
             )
@@ -213,15 +216,15 @@ if uploaded_files:
 
     # Question input
     st.markdown("### ❓ Ask a Question")
-    question = st.text_input("Type your question about the PDF content here:")
+    question = st.text_input("Type your question about the document content here:")
     
     if question:
         with st.spinner("Generating answer..."):
             try:
                 # Check if vector store is initialized
                 if not st.session_state.qa_system.vector_store:
-                    st.error("No PDFs have been processed yet. Please upload and process PDFs first.")
-                    logger.error("Attempted to answer question without processed PDFs")
+                    st.error("No documents have been processed yet. Please upload and process documents first.")
+                    logger.error("Attempted to answer question without processed documents")
                     st.stop()
 
                 result = st.session_state.qa_system.answer_question(question)
@@ -270,4 +273,4 @@ if uploaded_files:
         )
 
 else:
-    st.info("👆 Please upload one or more PDF files to begin.")
+    st.info("👆 Please upload one or more documents to begin.")

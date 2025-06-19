@@ -8,3 +8,6 @@ python-dotenv
 langchain-ollama
 torch
 tqdm
+python-docx
+pandas
+openpyxl

@@ -12,6 +12,8 @@ import hashlib
 from pathlib import Path
 from tqdm import tqdm
 import traceback
+import pandas as pd
+from docx import Document
 
 # Configure logging
 logging.basicConfig(
@@ -72,14 +74,14 @@ Answer:"""
     }
 }
 
-class PDFQASystem:
-    def __init__(self, model_name: str = "phi3", chunk_size: int = 700, chunk_overlap: int = 150):
-        """Initialize the PDF QA system with specified model and chunking parameters."""
+class DocumentQASystem:
+    def __init__(self, model_name: str = "mistral", chunk_size: int = 500, chunk_overlap: int = 200):
+        """Initialize the Document QA system with specified model and chunking parameters."""
         try:
             if model_name not in MODEL_CONFIGS:
                 raise ValueError(f"Unsupported model: {model_name}. Supported models: {list(MODEL_CONFIGS.keys())}")
             
-            logger.info(f"Initializing PDFQASystem with model: {model_name}")
+            logger.info(f"Initializing DocumentQASystem with model: {model_name}")
             self.model_config = MODEL_CONFIGS[model_name]
             self.model_name = model_name
             self.chunk_size = chunk_size
@@ -108,10 +110,10 @@ class PDFQASystem:
             self.index_dir = Path("faiss_index")
             self.index_dir.mkdir(exist_ok=True)
             
-            logger.info("PDFQASystem initialized successfully")
+            logger.info("DocumentQASystem initialized successfully")
             
         except Exception as e:
-            logger.error(f"Error initializing PDFQASystem: {str(e)}")
+            logger.error(f"Error initializing DocumentQASystem: {str(e)}")
             logger.error(traceback.format_exc())
             raise
 
@@ -121,29 +123,30 @@ class PDFQASystem:
         file_name = os.path.basename(file_path)
         return hashlib.md5(f"{file_name}:{file_size}".encode()).hexdigest()
 
-    def load_pdf(self, pdf_path: str) -> Tuple[str, int]:
-        """Extract text from PDF file and return text and page count."""
+    def extract_text_from_file(self, file_path: str) -> str:
+        """Extract text from various file formats based on extension."""
         try:
-            if not os.path.exists(pdf_path):
-                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+            file_ext = os.path.splitext(file_path)[1].lower()
             
-            logger.info(f"Loading PDF: {pdf_path}")
-            doc = fitz.open(pdf_path)
-            text = ""
-            for page in doc:
-                blocks = page.get_text("blocks")
-                blocks.sort(key=lambda b: (b[1], b[0]))  # sort top to bottom, left to right
-                text += "\n".join([b[4] for b in blocks if b[4].strip()]) + "\n"
+            if file_ext == '.pdf':
+                doc = fitz.open(file_path)
+                text = ""
+                for page in doc:
+                    blocks = page.get_text("blocks")
+                    blocks.sort(key=lambda b: (b[1], b[0]))  # sort top to bottom, left to right
+                    text += "\n".join([b[4] for b in blocks if b[4].strip()]) + "\n"
+                return text
+                
+            elif file_ext == '.docx':
+                doc = Document(file_path)
+                return "\n".join([paragraph.text for paragraph in doc.paragraphs])
+                
             
-            if not text.strip():
-                logger.warning(f"PDF appears to be empty or contains no text: {pdf_path}")
-                raise ValueError("PDF appears to be empty or contains no text")
-            
-            logger.info(f"Successfully loaded PDF with {len(doc)} pages")
-            return text, len(doc)
-            
+            else:
+                raise ValueError(f"Unsupported file format: {file_ext}")
+                
         except Exception as e:
-            logger.error(f"Error loading PDF {pdf_path}: {str(e)}")
+            logger.error(f"Error extracting text from {file_path}: {str(e)}")
             logger.error(traceback.format_exc())
             raise
 
@@ -219,50 +222,78 @@ class PDFQASystem:
             logger.error(traceback.format_exc())
             raise
 
-    def process_pdf(self, pdf_path: str, progress_callback=None) -> bool:
-        """Process PDF file and update the QA system. Returns True if successful."""
+    def process_file(self, file_path: str, progress_callback=None) -> bool:
+        """Process a document file and create/update vector store."""
         try:
-            file_hash = self._compute_file_hash(pdf_path)
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"File not found: {file_path}")
             
-            # Check if we already have this file indexed
-            if file_hash in self.processed_files.values():
-                logger.info(f"File already indexed: {pdf_path}")
+            file_hash = self._compute_file_hash(file_path)
+            if file_hash in self.processed_files:
+                logger.info(f"File already processed: {file_path}")
                 return True
-
-            # Load PDF and get page count
-            text, page_count = self.load_pdf(pdf_path)
+            
             if progress_callback:
-                progress_callback(0.2, f"Loaded {page_count} pages")
-
+                progress_callback(0.1, "Extracting text...")
+            
+            # Extract text from file
+            text = self.extract_text_from_file(file_path)
+            
+            if not text.strip():
+                logger.warning(f"File appears to be empty or contains no text: {file_path}")
+                raise ValueError("File appears to be empty or contains no text")
+            
+            if progress_callback:
+                progress_callback(0.3, "Creating chunks...")
+            
             # Create chunks
             chunks = self.create_chunks(text)
-            if progress_callback:
-                progress_callback(0.4, f"Created {len(chunks)} chunks")
             
-            # Create new index if none exists, otherwise update
-            is_new_index = self.vector_store is None
-            self.create_vector_store(chunks, is_new_index)
-            if progress_callback:
-                progress_callback(0.8, "Created/updated vector store")
+            if not chunks:
+                logger.warning(f"No valid chunks created from file: {file_path}")
+                raise ValueError("No valid chunks could be created from the file")
             
-            if is_new_index:
-                self.setup_qa_chain()
+            if progress_callback:
+                progress_callback(0.6, "Creating vector store...")
+            
+            try:
+                # Create or update vector store
+                if self.vector_store is None:
+                    logger.info("Creating new vector store")
+                    self.vector_store = FAISS.from_texts(
+                        texts=chunks,
+                        embedding=self.embeddings,
+                        normalize_L2=True
+                    )
+                else:
+                    logger.info("Updating existing vector store")
+                    self.vector_store.add_texts(chunks)
+                
                 if progress_callback:
-                    progress_callback(0.9, "Set up QA chain")
-            
-            # Save the vector store
-            self.save_vector_store()
-            if progress_callback:
-                progress_callback(1.0, "Saved vector store")
-            
-            # Update processed files tracking
-            self.processed_files[os.path.basename(pdf_path)] = file_hash
-            
-            logger.info(f"Successfully processed PDF: {pdf_path}")
-            return True
+                    progress_callback(0.8, "Setting up QA chain...")
+                
+                # Set up QA chain
+                self.setup_qa_chain()
+                
+                # Update processed files
+                self.processed_files[file_hash] = file_path
+                
+                if progress_callback:
+                    progress_callback(1.0, "Processing complete!")
+                
+                logger.info(f"Successfully processed file: {file_path}")
+                return True
+                
+            except Exception as e:
+                logger.error(f"Error with vector store operations: {str(e)}")
+                logger.error(traceback.format_exc())
+                # Reset vector store on error
+                self.vector_store = None
+                self.qa_chain = None
+                raise
             
         except Exception as e:
-            logger.error(f"Error processing PDF {pdf_path}: {str(e)}")
+            logger.error(f"Error processing file {file_path}: {str(e)}")
             logger.error(traceback.format_exc())
             return False
 
@@ -298,7 +329,7 @@ class PDFQASystem:
         """Get answer for a question."""
         try:
             if not self.qa_chain:
-                raise ValueError("QA chain not initialized. Please process a PDF first.")
+                raise ValueError("QA chain not initialized. Please process a file first.")
             
             logger.info(f"Answering question: {question}")
             result = self.qa_chain({"query": question})

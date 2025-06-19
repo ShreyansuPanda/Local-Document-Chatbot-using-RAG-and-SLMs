@@ -1,10 +1,14 @@
-# PDF Q&A Chatbot
+# Document Q&A Chatbot
 
-A powerful chatbot that can answer questions about the content of your PDF documents using LangChain and local LLMs via Ollama.
+A powerful chatbot that can answer questions about the content of your documents (PDF, DOCX, CSV, and XLSX) using LangChain and local LLMs via Ollama.
 
 ## Features
 
-- Support for multiple PDF uploads
+- Support for multiple document formats:
+  - PDF files
+  - DOCX (Microsoft Word) files
+  - CSV files
+  - XLSX (Microsoft Excel) files
 - Chat history with expandable Q&A pairs
 - Download Q&A transcript
 - Configurable chunking parameters
@@ -32,7 +36,7 @@ A powerful chatbot that can answer questions about the content of your PDF docum
 1. Clone this repository:
    ```bash
    git clone <repository-url>
-   cd pdf-chatbot
+   cd document-chatbot
    ```
 
 2. Create a virtual environment (recommended):
@@ -62,7 +66,7 @@ A powerful chatbot that can answer questions about the content of your PDF docum
 
 ## Usage
 
-1. Upload one or more PDF files using the file uploader
+1. Upload one or more documents (PDF, DOCX, CSV, or XLSX) using the file uploader
 2. Wait for the files to be processed
 3. Type your question in the text input
 4. View the answer and source context in the chat history
@@ -78,14 +82,15 @@ You can adjust the following settings in the sidebar:
 ## Troubleshooting
 
 - If you get an error about Ollama not being available, make sure the Ollama service is running
-- If PDF processing fails, check that the PDF is not corrupted or password-protected
-- For memory issues with large PDFs, try reducing the chunk size in the configuration
+- If document processing fails, check that the file is not corrupted or password-protected
+- For memory issues with large documents, try reducing the chunk size in the configuration
+- For CSV and XLSX files, ensure they are properly formatted and contain text data
 
 ## Error Handling
 
 The system includes error handling for:
-- Invalid PDF files
-- Empty PDFs
+- Invalid document files
+- Empty documents
 - Processing errors
 - Question answering errors
 
