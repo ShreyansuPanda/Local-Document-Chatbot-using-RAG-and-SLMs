@@ -57,6 +57,28 @@ Information buried in large documents is often hard to retrieve manually. This p
   - Query input
   - Real-time answer generation
   - Chat history with export option
+ 
+### 5. **Configuration**
+
+You can adjust the following settings in the sidebar:
+- Select different LLM models
+- Adjust chunk size and overlap for text processing
+- View and manage chat history
+
+### 6. **Troubleshooting**
+
+- If you get an error about Ollama not being available, make sure the Ollama service is running
+- If document processing fails, check that the file is not corrupted or password-protected
+- For memory issues with large documents, try reducing the chunk size in the configuration
+- For CSV and XLSX files, ensure they are properly formatted and contain text data
+
+### 7. **Error Handling**
+
+The system includes error handling for:
+- Invalid document files
+- Empty documents
+- Processing errors
+- Question answering errors
 
 ---
 
