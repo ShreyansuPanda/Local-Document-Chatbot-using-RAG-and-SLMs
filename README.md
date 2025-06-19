@@ -66,6 +66,17 @@ Information buried in large documents is often hard to retrieve manually. This p
 
 - Python 3.10+
 - Basic GPU or CPU (no cloud dependencies!)
+- Ollama installed and running locally
+   - Download from: https://ollama.ai/
+   - Install and run the Ollama service
+   - Pull all of the supported models:
+     ```bash
+     ollama pull phi3
+     # and
+     ollama pull mistral
+     # and
+     ollama pull llama2
+     ```
 - Required packages:
 
 ```bash
