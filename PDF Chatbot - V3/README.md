@@ -7,8 +7,7 @@ A powerful chatbot that can answer questions about the content of your documents
 - Support for multiple document formats:
   - PDF files
   - DOCX (Microsoft Word) files
-  - CSV files
-  - XLSX (Microsoft Excel) files
+    
 - Chat history with expandable Q&A pairs
 - Download Q&A transcript
 - Configurable chunking parameters
@@ -22,12 +21,12 @@ A powerful chatbot that can answer questions about the content of your documents
 2. Ollama installed and running locally
    - Download from: https://ollama.ai/
    - Install and run the Ollama service
-   - Pull at least one of the supported models:
+   - Pull all of the supported models:
      ```bash
      ollama pull phi3
-     # or
+     # and
      ollama pull mistral
-     # or
+     # and
      ollama pull llama2
      ```
 
@@ -66,7 +65,7 @@ A powerful chatbot that can answer questions about the content of your documents
 
 ## Usage
 
-1. Upload one or more documents (PDF, DOCX, CSV, or XLSX) using the file uploader
+1. Upload one or more documents (PDF, DOCX) using the file uploader
 2. Wait for the files to be processed
 3. Type your question in the text input
 4. View the answer and source context in the chat history
